@@ -7,13 +7,13 @@ import java.util.*;
  */
 public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
 
-    Entry<K,V> [] entries;
-    double loadFactor;
-    int size;
-    int capacity;
-    final double DEFAULT_LOAD_FACTOR = 0.3;
-    final int DEFAULT_CAPACITY = 7;
-    final Entry<K,V> DEFUNCT = new SimpleEntry<K, V>(null, null);
+    private Entry<K,V> [] entries;
+    private double loadFactor;
+    private int size;
+    private int capacity;
+    private final double DEFAULT_LOAD_FACTOR = 0.3;
+    private final int DEFAULT_CAPACITY = 17;
+    private final Entry<K,V> DEFUNCT = new SimpleEntry<K, V>(null, null);
 
     public MyHashMap(){
         loadFactor = DEFAULT_LOAD_FACTOR;
@@ -26,11 +26,37 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
         this.loadFactor = loadFactor;
         capacity = DEFAULT_CAPACITY;
         size = 0;
-        entries = new SimpleEntry[7];
+        entries = new SimpleEntry[capacity];
     }
 
     private int location(int hash){
         return hash % capacity;
+    }
+
+    private void rehash(){
+        int oldCap = capacity;
+        capacity = capacity * 2;
+
+        Entry<K,V> [] newEntries = new SimpleEntry[capacity];
+
+        for (int i = 0; i < oldCap; i++) {
+            if (entries[i] != null) {
+                if (!entries[i].equals(DEFUNCT)) {
+                    int index = location(entries[i].getKey().hashCode());
+
+                    while (newEntries[index] != null) {
+                        if (index == capacity - 1)
+                            index = 0;
+                        else
+                            index++;
+                    }
+
+                    newEntries[index] = new SimpleEntry(entries[i].getKey(), entries[i].getValue());
+                }
+            }
+        }
+
+        System.arraycopy(newEntries,0, entries,0, capacity);
     }
 
     @Override
@@ -77,8 +103,9 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
     @Override
     public boolean containsValue(Object value) {
         for (int i = 0; i < capacity ; i++) {
-            if (entries[i].getValue().equals(value))
-                return true;
+            if (entries[i] != null)
+                if (entries[i].getValue().equals(value))
+                    return true;
         }
         return false;
     }
@@ -101,45 +128,49 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
 
     @Override
     public V put(K key, V value) {
+        if (loadFactor * capacity <= size) rehash();
+
         int index = location(key.hashCode());
 
-        V rtn = null;
-
-        while (entries[index] != null || entries[index].equals(DEFUNCT) || !entries[index].getKey().equals(key)){
-            if (index == capacity-1)
-                index = 0;
-            else
-                index++;
+        while (entries[index] != null){
+            if (entries[index].equals(DEFUNCT) || !entries[index].getKey().equals(key))
+                if (index == capacity-1)
+                    index = 0;
+                else
+                    index++;
         }
 
-        if (entries[index].getKey().equals(key))
-            rtn = entries[index].setValue(value);
-        else {
+        if (entries[index] == null) {
             entries[index] = new SimpleEntry<K, V>(key, value);
             size++;
+            return null;
         }
-        return rtn;
+        if (entries[index] == DEFUNCT){
+            entries[index] = new SimpleEntry<K, V>(key, value);
+            size++;
+            return null;
+        }
+
+        return entries[index].setValue(value);
     }
 
     @Override
     public V remove(Object key) {
         int index = location(key.hashCode());
 
-        V rtn = null;
-
-        while (entries[index] != null || !entries[index].getKey().equals(key)){
-            if (index == capacity-1)
-                index = 0;
-            else
-                index++;
+        while (entries[index] != null){
+            if (!entries[index].getKey().equals(key))
+                if (index == capacity-1)
+                    index = 0;
+                 else
+                     index++;
         }
 
-        if (entries[index].getKey().equals(key)){
-            rtn = entries[index].getValue();
-            entries[index] = DEFUNCT;
-            size--;
-        }
+        if (entries == null) return null;
 
+        V rtn = entries[index].getValue();
+        entries[index] = DEFUNCT;
+        size--;
         return rtn;
 
     }

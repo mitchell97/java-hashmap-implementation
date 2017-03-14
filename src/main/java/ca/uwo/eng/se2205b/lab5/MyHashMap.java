@@ -34,8 +34,9 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
     }
 
     private void rehash(){
+        System.out.println("called");
         int oldCap = capacity;
-        capacity = capacity * 2;
+        capacity = nextPrime(capacity * 2);
 
         Entry<K,V> [] newEntries = new SimpleEntry[capacity];
 
@@ -56,7 +57,31 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
             }
         }
 
+        entries = new SimpleEntry[capacity];
         System.arraycopy(newEntries,0, entries,0, capacity);
+    }
+
+    private int nextPrime(int num){
+        int m = DEFAULT_CAPACITY;
+
+        while (true) {
+            m++;
+            if (m <= 3)
+                return m;
+
+            boolean divisible = false;
+
+            for (int t = 2; !divisible && t <= Math.sqrt(m); t++) {
+                if (m % t == 0)
+                    divisible = true;
+            }
+
+            if (!divisible){
+                if(num < m)
+                   return m;
+
+            }
+        }
     }
 
     @Override
@@ -126,53 +151,60 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
         return null;
     }
 
+    private int getKeyIndex(Object key){
+        int index = location(key.hashCode());
+
+        while (entries[index] != null){
+            if (entries[index].getKey().equals(key))
+                break;
+
+            if (index == capacity - 1)
+                index = 0;
+            else
+                index++;
+        }
+
+        return index;
+    }
+
     @Override
     public V put(K key, V value) {
-        if (loadFactor * capacity <= size) rehash();
+        if (containsKey(key))
+            return entries[getKeyIndex(key)].setValue(value);
+
+        if (size >= loadFactor * capacity)
+            rehash();
+
+        System.out.println("Capacity: " + capacity + " Size: " + size);
 
         int index = location(key.hashCode());
 
         while (entries[index] != null){
-            if (entries[index].equals(DEFUNCT) || !entries[index].getKey().equals(key))
-                if (index == capacity-1)
-                    index = 0;
-                else
-                    index++;
+            if (entries[index].equals(DEFUNCT))
+                break;
+
+            if (index == capacity-1)
+                index = 0;
+            else
+                index++;
         }
 
-        if (entries[index] == null) {
-            entries[index] = new SimpleEntry<K, V>(key, value);
-            size++;
-            return null;
-        }
-        if (entries[index] == DEFUNCT){
-            entries[index] = new SimpleEntry<K, V>(key, value);
-            size++;
-            return null;
-        }
-
-        return entries[index].setValue(value);
+        entries[index] = new SimpleEntry<K, V>(key, value);
+        size++;
+        return null;
     }
 
     @Override
     public V remove(Object key) {
-        int index = location(key.hashCode());
+        int index = getKeyIndex(key);
 
-        while (entries[index] != null){
-            if (!entries[index].getKey().equals(key))
-                if (index == capacity-1)
-                    index = 0;
-                 else
-                     index++;
-        }
-
-        if (entries == null) return null;
+        if (entries[index] == null)
+            return null;
 
         V rtn = entries[index].getValue();
         entries[index] = DEFUNCT;
         size--;
         return rtn;
-
     }
 
     @Override
@@ -231,5 +263,9 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
     @Override
     public int hashCode() {
         return super.hashCode();
+    }
+
+    class EntrySet{
+
     }
 }

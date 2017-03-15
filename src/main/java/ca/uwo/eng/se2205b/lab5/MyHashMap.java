@@ -110,21 +110,24 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
 
     @Override
     public boolean containsKey(Object key) {
-        if (key == null) return false;
         if (isEmpty()) return false;
 
         int index = location(key.hashCode());
 
         while (entries[index] != null){
             if (!entries[index].equals(DEFUNCT)) {
-                if (entries[index].getKey().equals(key))
-                    return true;
-
-                if (index == capacity - 1)
-                    index = 0;
-                else
-                    index++;
+                if (entries[index].getKey() == null) {
+                    if (key == null) return true;
+                }
+                else {
+                    if (entries[index].getKey().equals(key))
+                        return true;
+                }
             }
+            if (index == capacity - 1)
+                index = 0;
+            else
+                index++;
         }
         return false;
     }
@@ -152,9 +155,16 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
         int index = location(key.hashCode());
 
         while (entries[index] != null){
-            if (entries[index].getKey().equals(key))
-                return entries[index].getValue();
-
+            if (!entries[index].equals(DEFUNCT)){
+                if (entries[index].getKey() == null){
+                    if (key == null)
+                        return entries[index].getValue();
+                }
+                else{
+                    if (entries[index].getKey().equals(key))
+                        return entries[index].getValue();
+                }
+            }
             if (index == capacity-1)
                 index = 0;
             else
@@ -181,8 +191,12 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
 
     @Override
     public V put(K key, V value) {
-        if (containsKey(key))
+        if (containsKey(key)){
+            if (key == null && value == null) throw new UnsupportedOperationException("CREATING DEFUNCT");
             return entries[getKeyIndex(key)].setValue(value);
+        }
+
+        if (key == null && value == null) throw new IllegalArgumentException("DONT ADD DEFUNCT");
 
         if (size >= loadFactor * capacity)
             rehash();

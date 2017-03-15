@@ -195,8 +195,7 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
             if (key == null && value == null) throw new UnsupportedOperationException("CREATING DEFUNCT");
             return entries[getKeyIndex(key)].setValue(value);
         }
-
-        if (key == null && value == null) throw new IllegalArgumentException("DONT ADD DEFUNCT");
+        if (key == null && value == null) throw new IllegalArgumentException("PUTTING DEFUNCT");
 
         if (size >= loadFactor * capacity)
             rehash();
@@ -331,6 +330,11 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
             return MyHashMap.this.size;
         }
 
+        @Override
+        public void clear() {
+            MyHashMap.this.clear();
+        }
+
         private class SetIterator implements Iterator {
 
             Entry<K,V> current;
@@ -340,10 +344,11 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
                 current = null;
                 queue = new ArrayDeque<>(MyHashMap.this.size);
 
-                for (int i = 0; i < MyHashMap.this.capacity; i++) {
+                for (int i = 0; i < MyHashMap.this.capacity; i++)
                     if (MyHashMap.this.entries[i] != null)
-                        queue.addLast(MyHashMap.this.entries[i]);
-                }
+                        if (!MyHashMap.this.entries[i].equals(DEFUNCT))
+                            queue.addLast(MyHashMap.this.entries[i]);
+
             }
 
             @Override

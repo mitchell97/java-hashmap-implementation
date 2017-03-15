@@ -18,6 +18,10 @@ public class ModelTests {
         test.put(7,'k');
         test.put(3,'m');
 
+        test.put(10, null);
+        assertEquals(null, test.get(10));
+
+
         assertTrue(test.containsKey(5));
         assertTrue(test.containsKey(6));
         assertTrue(test.containsKey(7));

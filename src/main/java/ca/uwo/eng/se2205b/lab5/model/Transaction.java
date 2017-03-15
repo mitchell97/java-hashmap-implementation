@@ -36,4 +36,24 @@ public final class Transaction {
     public double getAmount() {
         return amount;
     }
+
+    @Override
+    public int hashCode() {
+        int hash = 17;
+        hash = hash*31 + dateTime.hashCode();
+        hash = hash*31 + Double.hashCode(amount);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Transaction)) return false;
+        Transaction that = (Transaction) obj;
+        return (dateTime.equals(that.getDateTime()) && amount == that.getAmount());
+    }
+
+    @Override
+    public String toString() {
+        return "Transaction || Date: " + dateTime.toString() + " Amount: " + amount;
+    }
 }

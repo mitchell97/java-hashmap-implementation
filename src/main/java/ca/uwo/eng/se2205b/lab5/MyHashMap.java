@@ -34,7 +34,6 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
     }
 
     private void rehash(){
-        System.out.println("called");
         int oldCap = capacity;
         capacity = nextPrime(capacity * 2);
 
@@ -62,7 +61,7 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
     }
 
     private int nextPrime(int num){
-        int m = DEFAULT_CAPACITY;
+        int m = num;
 
         while (true) {
             m++;
@@ -111,32 +110,45 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
 
     @Override
     public boolean containsKey(Object key) {
+        if (key == null) return false;
+        if (isEmpty()) return false;
+
         int index = location(key.hashCode());
 
         while (entries[index] != null){
-            if (entries[index].getKey().equals(key))
-                return true;
+            if (!entries[index].equals(DEFUNCT)) {
+                if (entries[index].getKey().equals(key))
+                    return true;
 
-            if (index == capacity-1)
-                index = 0;
-            else
-                index++;
+                if (index == capacity - 1)
+                    index = 0;
+                else
+                    index++;
+            }
         }
         return false;
     }
 
     @Override
     public boolean containsValue(Object value) {
+        if (isEmpty()) return false;
         for (int i = 0; i < capacity ; i++) {
-            if (entries[i] != null)
-                if (entries[i].getValue().equals(value))
+            if (entries[i] != null) {
+                if (entries[i].getValue() == null)
+                    if (value == null)
+                        return true;
+
+                if (entries[i].getValue()== value)
                     return true;
+            }
         }
         return false;
     }
 
     @Override
     public V get(Object key) {
+        if (isEmpty()) return null;
+
         int index = location(key.hashCode());
 
         while (entries[index] != null){
@@ -175,8 +187,6 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
         if (size >= loadFactor * capacity)
             rehash();
 
-        System.out.println("Capacity: " + capacity + " Size: " + size);
-
         int index = location(key.hashCode());
 
         while (entries[index] != null){
@@ -188,7 +198,6 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
             else
                 index++;
         }
-
         entries[index] = new SimpleEntry<K, V>(key, value);
         size++;
         return null;
@@ -200,6 +209,17 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
 
         if (entries[index] == null)
             return null;
+
+        while (entries[index] != null){
+            if (entries[index].equals(DEFUNCT))
+                continue;
+
+            if (entries[index].getKey() == null){
+                if (key == null) break;
+            }
+
+            if (entries[index].getKey().equals(key)) break;
+        }
 
         V rtn = entries[index].getValue();
         entries[index] = DEFUNCT;
@@ -226,9 +246,12 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
     public Set<K> keySet() {
         Set<K> rtn = new TreeSet<K>();
 
+        if (isEmpty()) return rtn;
+
         for (int i = 0; i < capacity; i++) {
-            if (entries[i] != null || !entries[i].equals(DEFUNCT))
-                rtn.add(entries[i].getKey());
+            if (entries[i] != null)
+                if (!entries[i].equals(DEFUNCT))
+                    rtn.add(entries[i].getKey());
         }
 
         return rtn;
@@ -236,11 +259,14 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
 
     @Override
     public Collection<V> values() {
-        Set<V> rtn = new TreeSet<V>();
+        Collection<V> rtn = new ArrayList<>();
+
+        if (isEmpty()) return rtn;
 
         for (int i = 0; i < capacity; i++) {
-            if (entries[i] != null || !entries[i].equals(DEFUNCT))
-                rtn.add(entries[i].getValue());
+            if (entries[i] != null)
+                if (!entries[i].equals(DEFUNCT))
+                    rtn.add(entries[i].getValue());
         }
 
         return rtn;
@@ -248,7 +274,7 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
 
     @Override
     public Set<Entry<K, V>> entrySet() {
-        return null;
+        return new EntrySet();
     }
 
     @Override
@@ -256,16 +282,78 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
         if (!(o instanceof Map)) return false;
 
         Map<K,V> that = (Map<K,V>) o;
+        if (this.size != that.size()) return false;
 
-        return false;
+        for (Entry<K,V> entry : this.entrySet()) {
+            if (get(entry.getKey()) == null) {
+                if (that.get(entry.getKey()) != null)
+                    return false;
+            }
+            else
+            if (!get(entry.getKey()).equals(that.get(entry.getKey())))
+                return false;
+        }
+
+        return true;
     }
 
     @Override
     public int hashCode() {
-        return super.hashCode();
+        int hash = 0;
+        for(Entry<K,V> entry : entrySet())
+            hash += entry.hashCode();
+        return hash;
     }
 
-    class EntrySet{
+    private class EntrySet extends AbstractSet{
+
+        @Override
+        public Iterator iterator() {
+            return new SetIterator();
+        }
+
+        @Override
+        public int size() {
+            return MyHashMap.this.size;
+        }
+
+        private class SetIterator implements Iterator {
+
+            Entry<K,V> current;
+            Deque<Entry<K,V>> queue;
+
+            SetIterator(){
+                current = null;
+                queue = new ArrayDeque<>(MyHashMap.this.size);
+
+                for (int i = 0; i < MyHashMap.this.capacity; i++) {
+                    if (MyHashMap.this.entries[i] != null)
+                        queue.addLast(MyHashMap.this.entries[i]);
+                }
+            }
+
+            @Override
+            public boolean hasNext() {
+                return !queue.isEmpty();
+            }
+
+            @Override
+            public Entry<K,V> next() {
+                if (!hasNext()) throw new NoSuchElementException("No element to iterate");
+
+                current = queue.removeFirst();
+                return current;
+            }
+
+            @Override
+            public void remove() {
+                if (current == null) throw new IllegalStateException("Removing null");
+
+                MyHashMap.this.remove(current.getKey());
+                current = null;
+            }
+        }
 
     }
+
 }

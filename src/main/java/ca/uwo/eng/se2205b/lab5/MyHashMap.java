@@ -137,19 +137,22 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
         if (isEmpty()) return false;
         for (int i = 0; i < capacity ; i++) {
             if (entries[i] != null) {
-                if (entries[i].getValue() == null)
+                if (entries[i].equals(DEFUNCT))
+                    continue;
+
+                if (entries[i].getValue() == null) {
                     if (value == null)
                         return true;
-
-                if (entries[i].getValue()== value)
-                    return true;
+                }else
+                    if (entries[i].getValue().equals(value))
+                        return true;
             }
         }
         return false;
     }
 
     @Override
-    public V get(Object key) {
+    public V get(Object key)    {
         if (isEmpty()) return null;
 
         int index = location(key.hashCode());
@@ -256,36 +259,6 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
     }
 
     @Override
-    public Set<K> keySet() {
-        Set<K> rtn = new TreeSet<K>();
-
-        if (isEmpty()) return rtn;
-
-        for (int i = 0; i < capacity; i++) {
-            if (entries[i] != null)
-                if (!entries[i].equals(DEFUNCT))
-                    rtn.add(entries[i].getKey());
-        }
-
-        return rtn;
-    }
-
-    @Override
-    public Collection<V> values() {
-        Collection<V> rtn = new ArrayList<>();
-
-        if (isEmpty()) return rtn;
-
-        for (int i = 0; i < capacity; i++) {
-            if (entries[i] != null)
-                if (!entries[i].equals(DEFUNCT))
-                    rtn.add(entries[i].getValue());
-        }
-
-        return rtn;
-    }
-
-    @Override
     public Set<Entry<K, V>> entrySet() {
         return new EntrySet();
     }
@@ -318,7 +291,7 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
         return hash;
     }
 
-    private class EntrySet extends AbstractSet{
+    private class EntrySet extends AbstractSet<Entry<K,V>>{
 
         @Override
         public Iterator iterator() {
@@ -359,7 +332,6 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
             @Override
             public Entry<K,V> next() {
                 if (!hasNext()) throw new NoSuchElementException("No element to iterate");
-
                 current = queue.removeFirst();
                 return current;
             }
@@ -367,7 +339,6 @@ public class MyHashMap<K,V> extends AbstractMap<K,V> implements IHashMap<K,V> {
             @Override
             public void remove() {
                 if (current == null) throw new IllegalStateException("Removing null");
-
                 MyHashMap.this.remove(current.getKey());
                 current = null;
             }
